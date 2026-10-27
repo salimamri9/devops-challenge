@@ -4,15 +4,23 @@ on:
   pull_request:
     paths:
       - "intern-task-terraform/**"
+      # user_data embeds the app's Dockerfile and source
+      - "intern-task-app/**"
+      - ".github/workflows/intern-task-terraform-ci.yml"
   push:
     branches: [main]
     paths:
       - "intern-task-terraform/**"
+      - "intern-task-app/**"
+      - ".github/workflows/intern-task-terraform-ci.yml"
   workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: intern-task-terraform/terraform
     env:
       # Fake, not secret — these never touch a real AWS account. They only
       # work because the module's provider block sets skip_credentials_validation
@@ -20,6 +28,12 @@ jobs:
       AWS_ACCESS_KEY_ID: fake
       AWS_SECRET_ACCESS_KEY: fake
       AWS_DEFAULT_REGION: us-east-1
+      # Required variables have no defaults on purpose, so CI supplies
+      # placeholders: CI never applies, so no real key or IP is involved.
+      # 203.0.113.0/24 is the RFC 5737 documentation range, and the key is
+      # a throwaway public key whose private half was deleted.
+      TF_VAR_ssh_cidr: 203.0.113.10/32
+      TF_VAR_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPvqOocfhNgCgn+jko89GYFSrRAXrGbVBwvdOZ2/DGYU ci-placeholder"
     steps:
       - uses: actions/checkout@v4
 
@@ -30,8 +44,11 @@ jobs:
       - name: Format check
         run: terraform fmt -check -recursive
 
+      - name: Init
+        run: terraform init -input=false
+
       - name: Validate
         run: terraform validate
 
       - name: Plan
-        run: terraform plan
+        run: terraform plan -input=false
