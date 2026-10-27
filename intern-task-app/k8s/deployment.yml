@@ -29,6 +29,14 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "500m"
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
           livenessProbe:
             httpGet: {path: /healthz, port: http}
             initialDelaySeconds: 10
